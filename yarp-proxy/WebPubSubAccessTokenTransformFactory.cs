@@ -1,3 +1,4 @@
+using Azure.Messaging.WebPubSub;
 using Yarp.ReverseProxy.Forwarder;
 using Yarp.ReverseProxy.Transforms;
 using Yarp.ReverseProxy.Transforms.Builder;
@@ -8,9 +9,15 @@ public class WebPubSubAccessTokenTransformFactory : ITransformFactory
 {
 
     private readonly ILogger<WebPubSubAccessTokenTransformFactory> _logger;
+    private readonly IConfiguration _config;
+    private readonly WebPubSubServiceClient _webPubSubClient;
 
-    public WebPubSubAccessTokenTransformFactory(ILogger<WebPubSubAccessTokenTransformFactory> logger){
+    public WebPubSubAccessTokenTransformFactory(ILogger<WebPubSubAccessTokenTransformFactory> logger, 
+                                                IConfiguration config,
+                                                WebPubSubServiceClient webPubSubClient){
         this._logger = logger;
+        this._config = config;
+        this._webPubSubClient = webPubSubClient;
     }
 
     public bool Build(TransformBuilderContext context,
@@ -30,13 +37,13 @@ public class WebPubSubAccessTokenTransformFactory : ITransformFactory
                 _logger.LogInformation($"found transform value: {contextValue.Key} with value: {contextValue.Value}");
             }
 
-            // TODO: fetch actual access token
             //context.AddQueryValue("access_token", "some random access token", true);
             context.AddRequestTransform(context => {
                 if(! context.Query.Collection.ContainsKey("access_token")){
-                    
                     var deviceId = getDeviceIdFromRouteValues(context);
-                    context.Query.Collection["access_token"] = $"my random access token value for device: {deviceId}";
+                    var accessUri = _webPubSubClient.GetClientAccessUri(TimeSpan.FromMinutes(10), deviceId);
+                    var accessToken = System.Web.HttpUtility.ParseQueryString(accessUri.Query)["access_token"];
+                    context.Query.Collection["access_token"] = $"{accessToken}";
                 }
 
                 return default;
@@ -56,6 +63,15 @@ public class WebPubSubAccessTokenTransformFactory : ITransformFactory
         }
         return deviceId?.ToString()!;
     }
+
+    // private WebPubSubServiceClient getWebPubSubServiceClient(){
+    //     // get webpubsub connection string:
+    //     var connString = _config["WebPubSub:ConnectionString"];
+    //     var hubName = _config["WebPubSub:xstofhub"];
+
+    //     var serviceClient = new WebPubSubServiceClient(connString, hubName);
+    //     return serviceClient;
+    // }
 
     public bool Validate(TransformRouteValidationContext context, IReadOnlyDictionary<string, string> transformValues)
     {

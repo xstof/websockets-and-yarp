@@ -1,0 +1,23 @@
+LOC=northeurope
+RG=xstof-webpubsub
+
+# create resource group
+az group create --resource-group $RG -l $LOC
+
+# deploy azure web pub sub service
+az deployment group create -g $RG --template-file ./webpubsub.bicep \
+--parameters webpubsub_name=xstof-webpubsub \
+--parameters webpubsub_hubname=xstofhub
+
+# connect a client to webpubsub service
+# see: https://docs.microsoft.com/en-us/azure/azure-web-pubsub/quickstart-cli-try
+az webpubsub client start --name "xstof-webpubsub" \
+                          --resource-group $RG \
+                          --hub-name "xstofhub" \
+                          --user-id "christof-testclient"
+
+# connect on the server side
+az webpubsub service broadcast --name "xstof-webpubsub" \
+                               --resource-group $RG \
+                               --hub-name "xstofhub" \
+                               --payload "Hello World"

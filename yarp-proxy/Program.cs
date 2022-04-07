@@ -1,9 +1,13 @@
+using Yarp.ReverseProxy.Transforms;
+using yarp_proxy;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddReverseProxy()
-                .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
+                .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"))
+                .AddTransformFactory<WebPubSubAccessTokenTransformFactory>();
 
 var app = builder.Build();
 
